@@ -26,7 +26,7 @@ class ClientSession(TelegramClient):
                 entity = await self.get_entity(await self.get_input_entity(chat_id))
             except ValueError:
                 raise EntityNotFoundError(chat_id)
-            self._id_to_title_table[chat_id] = format_entity_name(entity)
+            self._id_to_title_table[chat_id], _ = format_entity_name(entity)
         return self._id_to_title_table[chat_id]
 
     async def str_to_chat_id(self, chat: str) -> int:

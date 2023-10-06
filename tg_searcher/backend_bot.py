@@ -52,8 +52,8 @@ class BackendBot:
 
         self._register_hooks()
 
-    def search(self, q: str, in_chats: Optional[List[int]], page_len: int, page_num: int):
-        return self._indexer.search(q, in_chats, page_len, page_num)
+    def search(self, q: str, in_chats: Optional[List[int]], page_len: int, page_num: int, user_id: str = None):
+        return self._indexer.search(q, in_chats, page_len, page_num, user_id)
 
     def rand_msg(self) -> IndexMsg:
         return self._indexer.retrieve_random_document()
@@ -73,13 +73,14 @@ class BackendBot:
         async for tg_message in self.session.iter_messages(chat_id, min_id=min_id, max_id=max_id):
             if msg_text := self._extract_text(tg_message):
                 url = f'https://t.me/c/{share_id}/{tg_message.id}'
-                sender = await self._get_sender_name(tg_message)
+                sender, sender_id = await self._get_sender_name(tg_message)
                 msg = IndexMsg(
                     content=msg_text,
                     url=url,
                     chat_id=chat_id,
                     post_time=datetime.fromtimestamp(tg_message.date.timestamp()),
                     sender=sender,
+                    sender_id=sender_id
                 )
                 msg_list.append(msg)
                 if call_back:
@@ -157,7 +158,7 @@ class BackendBot:
     async def format_dialog_html(self, chat_id: int):
         # TODO: handle PM URL
         name = await self.translate_chat_id(chat_id)
-        return f'<a href = "https://t.me/c/{chat_id}/99999999">{html.escape(name)}</a> ({chat_id})'
+        return f'<a href = "https://t.me/c/{chat_id}/">{html.escape(name)}</a> ({chat_id})'
 
     def _should_monitor(self, chat_id: int):
         # tell if a chat should be monitored
@@ -175,20 +176,20 @@ class BackendBot:
             return ''
 
     @staticmethod
-    async def _get_sender_name(message: TgMessage) -> str:
+    async def _get_sender_name(message: TgMessage) -> (str, str):
         # empty string will be returned if no sender
         sender = await message.get_sender()
         if isinstance(sender, User):
             return format_entity_name(sender)
         else:
-            return ''
+            return '', ''
 
     def _register_hooks(self):
         @self.session.on(events.NewMessage())
         async def client_message_handler(event: events.NewMessage.Event):
             if self._should_monitor(event.chat_id) and (msg_text := self._extract_text(event)):
                 share_id = get_share_id(event.chat_id)
-                sender = await self._get_sender_name(event.message)
+                sender, sender_id = await self._get_sender_name(event.message)
                 url = f'https://t.me/c/{share_id}/{event.id}'
                 self._logger.info(f'New msg {url} from "{sender}": "{brief_content(msg_text)}"')
                 msg = IndexMsg(
@@ -196,7 +197,8 @@ class BackendBot:
                     url=url,
                     chat_id=share_id,
                     post_time=datetime.fromtimestamp(event.date.timestamp()),
-                    sender=sender
+                    sender=sender,
+                    sender_id=sender_id
                 )
                 self.newest_msg[share_id] = msg
                 self._indexer.add_document(msg)
@@ -207,7 +209,8 @@ class BackendBot:
                 share_id = get_share_id(event.chat_id)
                 url = f'https://t.me/c/{share_id}/{event.id}'
                 self._logger.info(f'Update message {url} to: "{brief_content(msg_text)}"')
-                self._indexer.update(url=url, content=msg_text)
+                # do not update 
+                # self._indexer.update(url=url, content=msg_text)
 
         @self.session.on(events.MessageDeleted())
         async def client_message_delete_handler(event: events.MessageDeleted.Event):
@@ -218,4 +221,5 @@ class BackendBot:
                 for msg_id in event.deleted_ids:
                     url = f'https://t.me/c/{share_id}/{msg_id}'
                     self._logger.info(f'Delete message {url}')
-                    self._indexer.delete(url=url)
+                    # do not delete 
+                    # self._indexer.delete(url=url)

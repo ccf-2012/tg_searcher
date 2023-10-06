@@ -96,6 +96,10 @@ class BotFrontend:
         self.chat_ids_parser = ArgumentParser()
         self.chat_ids_parser.add_argument('chats', type=str, nargs='*')
 
+        self.user_chats_parser = ArgumentParser()
+        self.user_chats_parser.add_argument('user', type=str)
+        self.user_chats_parser.add_argument('chats', type=str)
+
     async def start(self):
         self._admin = await self.backend.str_to_chat_id(self._cfg.admin)
         try:
@@ -224,6 +228,35 @@ class BotFrontend:
                 self.backend.monitored_chats.add(chat_id)
                 chat_html = self.backend.format_dialog_html(chat_id)
                 await event.reply(f'{chat_html} 已被加入监听列表', parse_mode='html')
+
+        elif text.startswith('/user'):
+            args = self.user_chats_parser.parse_args(shlex.split(text)[1:])
+
+            chat_ids = None
+            # selected_chat_id = self._query_selected_chat(event)
+            if args.user is None or (args.chats is None and selected_chat_id is None):
+                await event.reply(
+                    f'请使用 <pre>/user username </pre> 以查找用户发言，'
+                    f'或者使用 <pre>/user username groupname </pre> 指定用户在某群组的发言', parse_mode='html')
+                return
+            if len(args.chats) > 0 :
+                # chat_ids = await self._chat_ids_from_args(args.chats) or selected_chat_id
+                chat_ids = [int(args.chats)]
+
+            start_time = time()
+            q = ''
+            self._logger.info(f'Search "{args.user}" in chats {chat_ids}')
+            result = self.backend.search(q, in_chats=chat_ids, page_len=self._cfg.page_len, page_num=1, user_id=args.user)
+
+            used_time = time() - start_time
+            respond = await self._render_response_text(result, used_time)
+            buttons = self._render_respond_buttons(result, 1)
+            msg: TgMessage = await event.respond(respond, parse_mode='html', buttons=buttons)
+
+            self._redis.set(f'{self.id}:query_text:{event.chat_id}:{msg.id}', q)
+            if chat_ids:
+                self._redis.set(f'{self.id}:query_chats:{event.chat_id}:{msg.id}', ','.join(map(str, chat_ids)))
+
 
         elif text.startswith('/clear'):
             args = self.chat_ids_parser.parse_args(shlex.split(text)[1:])
@@ -419,12 +452,15 @@ class BotFrontend:
     async def _render_response_text(self, result: SearchResult, used_time: float):
         string_builder = [f'共搜索到 {result.total_results} 个结果，用时 {used_time: .3} 秒：\n\n']
         for hit in result.hits:
-            chat_title = await self.backend.translate_chat_id(hit.msg.chat_id)
+            string_builder.append(f'「{hit.highlighted}」')
             if len(hit.msg.sender) > 0:
-                string_builder.append(f'<b>{chat_title} (<u>{hit.msg.sender}</u>) [{hit.msg.post_time}]</b>\n')
+                string_builder.append(f'<a href="{hit.msg.url}">Via {hit.msg.sender}</a> \n')
+                # string_builder.append(f' <a href="{hit.msg.url}">{hit.msg.sender}</a> @ {chat_title} [{hit.msg.post_time}]\n')
             else:
-                string_builder.append(f'<b>{chat_title} [{hit.msg.post_time}]</b>\n')
-            string_builder.append(f'<a href="{hit.msg.url}">{hit.highlighted}</a>\n')
+                chat_title = await self.backend.translate_chat_id(hit.msg.chat_id)
+                string_builder.append(f'  <a href="{hit.msg.url}">Via {chat_title} </a> \n')
+                # string_builder.append(f' @ <a href="{hit.msg.url}">{chat_title} </a> [{hit.msg.post_time}]\n')
+            # string_builder.append(f'<a href="{hit.msg.url}">{hit.highlighted}</a>\n')
         return ''.join(string_builder)
 
     def _render_respond_buttons(self, result, cur_page_num):

@@ -21,14 +21,16 @@ class IndexMsg:
         chat_id=TEXT(stored=True),
         post_time=DATETIME(stored=True, sortable=True),
         sender=TEXT(stored=True),
+        sender_id=TEXT(stored=True),
     )
 
-    def __init__(self, content: str, url: str, chat_id: Union[int, str], post_time: datetime, sender: str):
+    def __init__(self, content: str, url: str, chat_id: Union[int, str], post_time: datetime, sender: str, sender_id: str):
         self.content = content
         self.url = url
         self.chat_id = int(chat_id)
         self.post_time = post_time
         self.sender = sender
+        self.sender_id = sender_id
 
     def as_dict(self):
         return {
@@ -36,7 +38,8 @@ class IndexMsg:
             'url': self.url,
             'chat_id': str(self.chat_id),
             'post_time': self.post_time,
-            'sender': self.sender
+            'sender': self.sender,
+            'sender_id': str(self.sender_id)
         }
 
     def __str__(self):
@@ -101,15 +104,26 @@ class Indexer:
             with self.ix.writer() as writer:
                 writer.add_document(**message.as_dict())
 
-    def search(self, q_str: str, in_chats: Optional[List[int]], page_len: int, page_num: int = 1) -> SearchResult:
-        q = self.query_parser.parse(q_str)
+    def search(self, q_str: str, in_chats: Optional[List[int]], page_len: int, page_num: int = 1, user_id: str = None) -> SearchResult:
         with self.ix.searcher() as searcher:
-            q_filter = in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])
-            result_page = searcher.search_page(q, page_num, page_len, filter=q_filter,
-                                               sortedby='post_time', reverse=True)
+            if user_id is None:
+                q = self.query_parser.parse(q_str)
+                q_filter = in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])
+                result_page = searcher.search_page(q, page_num, page_len, filter=q_filter,
+                                                sortedby='post_time', reverse=True)
 
-            hits = [SearchHit(IndexMsg(**msg), self.highlighter.highlight_hit(msg, 'content'))
-                    for msg in result_page]
+                hits = [SearchHit(IndexMsg(**msg), self.highlighter.highlight_hit(msg, 'content'))
+                        for msg in result_page]
+            else:
+                q = QueryParser('sender_id', IndexMsg.schema).parse(user_id)
+                q_filter = in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])
+                # q_filter = And([Term('sender_id', user_id), in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])])
+                result_page = searcher.search_page(q, page_num, page_len, filter=q_filter,
+                                                sortedby='post_time', reverse=True)
+
+                hits = [SearchHit(IndexMsg(**msg), msg['content'])
+                        for msg in result_page]
+
             return SearchResult(hits, result_page.is_last_page(), result_page.total)
 
     def list_indexed_chats(self) -> Set[int]:
