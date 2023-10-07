@@ -106,7 +106,7 @@ class Indexer:
 
     def search(self, q_str: str, in_chats: Optional[List[int]], page_len: int, page_num: int = 1, user_id: str = None) -> SearchResult:
         with self.ix.searcher() as searcher:
-            if user_id is None:
+            if user_id is None or user_id == '':
                 q = self.query_parser.parse(q_str)
                 q_filter = in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])
                 result_page = searcher.search_page(q, page_num, page_len, filter=q_filter,

@@ -10,7 +10,7 @@ docker-compose build
 ```sh
 mkdir config
 
-# 编写配置，参考 tg_searcher/doc/configuration.md
+# 编写配置，参考 doc/configuration.md
 # 其中: redis: redis:6379, runtime_dir: /app/config/tg_searcher_data
 vi searcher.yaml 
 ```
@@ -26,6 +26,8 @@ docker start -ia tg_searcher # 这时你将需要按指引登入账号，一切�
 * 注意
 1. 生成的记录在： `config\tg_searcher_data` `config\redis_data`
 2. 如果修改了IndexMsg scheme，则需要删除 `config\tg_searcher_data` 才能运行
+
+-----
 
 # TG Searcher
 
