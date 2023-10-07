@@ -1,3 +1,32 @@
+# Modified docker build 
+* 修改代码，自建 image
+```sh
+# copy docker-compose.sample.yaml docker-compose.yaml
+docker-compose build
+```
+
+* 运行，同原方法
+1. 建 `config` 目录
+```sh
+mkdir config
+
+# 编写配置，参考 tg_searcher/doc/configuration.md
+# 其中: redis: redis:6379, runtime_dir: /app/config/tg_searcher_data
+vi searcher.yaml 
+```
+
+2. 运行
+```sh
+docker-compose up --no-start
+docker start tg_searcher_redis
+
+docker start -ia tg_searcher # 这时你将需要按指引登入账号，一切完成后 Ctrl-P Ctrl-Q 解离
+```
+
+* 注意
+1. 生成的记录在： `config\tg_searcher_data` `config\redis_data`
+2. 如果修改了IndexMsg scheme，则需要删除 `config\tg_searcher_data` 才能运行
+
 # TG Searcher
 
 众所周知，Telegram 的搜索功能较弱，尤其是对于中文等 CJK 语言，由于 Telegram 无法对其进行正确的分词，因此很难搜到想要的内容。本项目实现了一个通用的框架，用户可以对 Telegram 的会话建立索引，通过 bot 来便捷地搜索消息。

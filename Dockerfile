@@ -1,13 +1,15 @@
-FROM python:3.9 AS BUILDER
+FROM python:3.10-alpine as builder
 # Because cryptg builds some native library
 # use multi-stage build reduce image size
 
 RUN apk update && apk add --no-cache tzdata alpine-sdk ca-certificates
-ADD requirements.txt /tmp/
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+COPY requirements.txt /tmp/
 RUN pip3 install --user -r /tmp/requirements.txt && rm /tmp/requirements.txt
 
 
-FROM python:3.9
+FROM python:3.10-alpine
 WORKDIR /app
 ENV TZ=Asia/Shanghai
 
