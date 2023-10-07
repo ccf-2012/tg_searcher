@@ -1,0 +1,7 @@
+telethon
+cryptg
+whoosh
+python-socks[asyncio]
+jieba
+pyyaml
+redis
