@@ -115,7 +115,11 @@ class Indexer:
                 hits = [SearchHit(IndexMsg(**msg), self.highlighter.highlight_hit(msg, 'content'))
                         for msg in result_page]
             else:
-                q = QueryParser('sender_id', IndexMsg.schema).parse(user_id)
+                if user_id.isdigit():
+                    q = QueryParser('sender_id', IndexMsg.schema).parse(user_id)
+                else:
+                    q = QueryParser('sender', IndexMsg.schema).parse(user_id)
+
                 q_filter = in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])
                 # q_filter = And([Term('sender_id', user_id), in_chats and Or([Term('chat_id', str(chat_id)) for chat_id in in_chats])])
                 result_page = searcher.search_page(q, page_num, page_len, filter=q_filter,

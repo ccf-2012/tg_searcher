@@ -180,8 +180,9 @@ class BotFrontend:
             args_userid = args[1]
             chat_ids = None
             if len(args) > 2:
-                args_chatid = args[2]  
-                chat_ids = [int(args_chatid)]
+                args_chatid = args[2]
+                if args_chatid.isdigit():
+                    chat_ids = [int(args_chatid)]
             else:
                 args_chatid = None
 
@@ -431,6 +432,7 @@ class BotFrontend:
         commands = [
             BotCommand(command="random", description='随机返回一条已索引消息'),
             BotCommand(command="chats", description='选择对话'),
+            BotCommand(command="user", description='查找某个人的聊天记录'),
             BotCommand(command="search", description='搜索消息'),
         ]
         await self.bot(
@@ -453,7 +455,7 @@ class BotFrontend:
         for hit in result.hits:
             chat_title = await self.backend.translate_chat_id(hit.msg.chat_id)
             if len(chat_title) > 7:
-                chat_title = chat_title[:6] + '..'
+                chat_title = chat_title[:7] + '..'
             string_builder.append(f'「{hit.highlighted}」')
             if len(hit.msg.sender) > 0:
                 string_builder.append(f'<a href="{hit.msg.url}"> Via {hit.msg.sender}</a> - {chat_title}\n')

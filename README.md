@@ -16,11 +16,15 @@ vi searcher.yaml
 ```
 
 2. 运行
+* 首次运行
 ```sh
 docker-compose up --no-start
 docker start tg_searcher_redis
-
 docker start -ia tg_searcher # 这时你将需要按指引登入账号，一切完成后 Ctrl-P Ctrl-Q 解离
+```
+* 数据文件`config\tg_searcher_data` 未被删除时
+```sh
+docker-compose up  -d
 ```
 
 * 注意
