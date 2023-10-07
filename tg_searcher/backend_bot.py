@@ -209,8 +209,8 @@ class BackendBot:
                 share_id = get_share_id(event.chat_id)
                 url = f'https://t.me/c/{share_id}/{event.id}'
                 self._logger.info(f'Update message {url} to: "{brief_content(msg_text)}"')
-                # do not update 
-                # self._indexer.update(url=url, content=msg_text)
+                # TODO: record update 
+                self._indexer.update(url=url, content=msg_text)
 
         @self.session.on(events.MessageDeleted())
         async def client_message_delete_handler(event: events.MessageDeleted.Event):

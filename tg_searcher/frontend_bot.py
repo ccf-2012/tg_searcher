@@ -454,8 +454,8 @@ class BotFrontend:
         string_builder = [f'共搜索到 {result.total_results} 个结果，用时 {used_time: .3} 秒：\n\n']
         for hit in result.hits:
             chat_title = await self.backend.translate_chat_id(hit.msg.chat_id)
-            if len(chat_title) > 7:
-                chat_title = chat_title[:7] + '..'
+            if len(chat_title) > 10:
+                chat_title = chat_title[:10] + '..'
             string_builder.append(f'「{hit.highlighted}」')
             if len(hit.msg.sender) > 0:
                 string_builder.append(f'<a href="{hit.msg.url}"> Via {hit.msg.sender}</a> - {chat_title}\n')
