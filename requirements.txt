@@ -1,7 +1,6 @@
 telethon
 cryptg
-whoosh
+sqlalchemy
 python-socks[asyncio]
-jieba
 pyyaml
 redis

@@ -25,9 +25,8 @@ setup(
     install_requires=[
         'telethon~=1.26.0',
         'cryptg',
-        'whoosh~=2.7.4',
         'python-socks[asyncio]',
-        'jieba',
+        'sqlalchemy',
         'pyyaml',
         'redis',
     ],

@@ -6,7 +6,6 @@ from argparse import ArgumentParser
 import shlex
 
 import redis
-import whoosh.index
 from telethon import TelegramClient, events, Button
 from telethon.tl.types import BotCommand, BotCommandScopePeer, BotCommandScopeDefault
 from telethon.tl.custom import Message as TgMessage
@@ -16,7 +15,7 @@ from redis.exceptions import ConnectionError as RedisConnectionError
 
 from .common import CommonBotConfig, get_logger, get_share_id, remove_first_word, brief_content
 from .backend_bot import BackendBot, EntityNotFoundError
-from .indexer import SearchResult
+from .backend_bot import SearchResult
 
 
 class BotFrontendConfig:
@@ -384,8 +383,8 @@ class BotFrontend:
             if event.chat_id != self._admin:
                 try:
                     await self._normal_msg_handler(event)
-                except whoosh.index.LockError:
-                    await event.reply(f'当前索引正在被写入，请等待现有写入操作完成')
+                # except whoosh.index.LockError:
+                #     await event.reply(f'当前索引正在被写入，请等待现有写入操作完成')
                 except EntityNotFoundError as e:
                     await event.reply(f'未找到 id 为 "{e.entity}" 的对话或用户')
                 except Exception as e:
@@ -453,15 +452,18 @@ class BotFrontend:
     async def _render_response_text(self, result: SearchResult, used_time: float):
         string_builder = [f'共搜索到 {result.total_results} 个结果，用时 {used_time: .3} 秒：\n\n']
         for hit in result.hits:
-            chat_title = await self.backend.translate_chat_id(hit.msg.chat_id)
+            if hit.chat_id.isdigit():
+                chat_title = await self.backend.translate_chat_id(int(hit.chat_id))
+            else:
+                chat_title = hit.chat_id
             if len(chat_title) > 10:
                 chat_title = chat_title[:10] + '..'
-            string_builder.append(f'「{hit.highlighted}」')
-            if len(hit.msg.sender) > 0:
-                string_builder.append(f'<a href="{hit.msg.url}"> Via {hit.msg.sender}</a> - {chat_title}\n')
+            string_builder.append(f'「{hit.content}」')
+            if len(hit.sender) > 0:
+                string_builder.append(f'<a href="{hit.url}"> Via {hit.sender}</a> - {chat_title}\n')
                 # string_builder.append(f' <a href="{hit.msg.url}">{hit.msg.sender}</a> @ {chat_title} [{hit.msg.post_time}]\n')
             else:
-                string_builder.append(f'  <a href="{hit.msg.url}"> Via {chat_title} </a> - {chat_title}\n')
+                string_builder.append(f'  <a href="{hit.url}"> Via {chat_title} </a> - {chat_title}\n')
                 # string_builder.append(f' @ <a href="{hit.msg.url}">{chat_title} </a> [{hit.msg.post_time}]\n')
             # string_builder.append(f'<a href="{hit.msg.url}">{hit.highlighted}</a>\n')
         return ''.join(string_builder)

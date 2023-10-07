@@ -9,6 +9,7 @@ __pycache__
 /config
 *.json
 *.yaml
+*.db
 
 __pycache__/
 *.py[cod]
